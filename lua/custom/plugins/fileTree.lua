@@ -8,9 +8,12 @@ return {
       'nvim-tree/nvim-web-devicons',
     },
 
-    keys = { -- load the plugin only when using it's keybinding:
-        { '<leader>e', "<cmd> lua require('nvim-tree.api').tree.toggle()<cr>", { desc = 'Toggle Nvim Tree' } }
-    },
+    vim.api.nvim_set_keymap(
+      'n',
+      '<leader>e',
+      "<cmd> lua require('nvim-tree.api').tree.toggle()<cr>",
+      { noremap = true, silent = true, desc = 'Open File Tree' }
+    ),
 
     config = function()
       require('nvim-tree').setup {}
