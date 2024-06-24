@@ -1,7 +1,7 @@
-- Add Lsp for C# and Python.
+- Add Lsp for C# (must) and Python.
 - Add Tab bar for Nvim.
 - Add GitUI.
-- Add nicer theme.
+- Add nicer theme?.
 - Orginize init. file (delete comments, put vin options in single file etc.).
 - Make a DashBoard Nice one.
 - Check Live grep warning.
