@@ -27,6 +27,12 @@ return {
         header = vim.split(logo, '\n'),
         center = {
           {
+            action = 'Telescope oldfiles',
+            desc = ' Old Files',
+            icon = '',
+            key = 'o',
+          },
+          {
             action = function()
               vim.api.nvim_input '<cmd>qa<cr>'
             end,
