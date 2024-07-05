@@ -56,6 +56,8 @@ namespace %s
 
   -- Insert the template into the current buffer
   vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.split(template, '\n'))
+  -- Save the file
+  vim.cmd 'write'
 end
 
 return M
