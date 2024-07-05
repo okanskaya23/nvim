@@ -1,4 +1,2 @@
-- Add GitUI.
 - Add nicer theme?.
-- Orginize init. file (delete comments, put vin options in single file etc.).
-- Check Live grep warning.
+--git ui them and exit case 
