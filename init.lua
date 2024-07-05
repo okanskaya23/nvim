@@ -822,5 +822,13 @@ end
 
 -- Load all modules from the 'functions' directory
 local functions = load_modules 'functions'
--- The line beneath this is called `modeline`. See `:help modeline`
--- vim: ts=2 sts=2 sw=2 et
+
+vim.api.nvim_create_autocmd({ 'BufNewFile', 'BufRead' }, {
+  pattern = { '*.cs' },
+  callback = function()
+    -- Check if the file is empty
+    if vim.fn.line '$' == 1 and vim.fn.getline(1) == '' then
+      functions.cs_template.create_cs_template()
+    end
+  end,
+})
