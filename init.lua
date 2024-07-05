@@ -802,6 +802,25 @@ require('lazy').setup({
     },
   },
 })
+local function load_modules(directory)
+  local modules = {}
+  local config_dir = vim.fn.stdpath 'config'
+  local full_path = config_dir .. '/lua/' .. directory
 
+  for _, file in ipairs(vim.fn.readdir(full_path, [[v:val =~ '\.lua$']])) do
+    local module_name = file:gsub('%.lua$', '')
+    local ok, module = pcall(require, directory .. '.' .. module_name)
+    if ok then
+      modules[module_name] = module
+    else
+      print('Error loading module ' .. module_name .. ': ' .. module)
+    end
+  end
+
+  return modules
+end
+
+-- Load all modules from the 'functions' directory
+local functions = load_modules 'functions'
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
