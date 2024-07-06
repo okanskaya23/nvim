@@ -12,10 +12,7 @@ return {
     version = '*',
     dependencies = { 'williamboman/mason.nvim' },
     config = function()
-      require('toggleterm').setup {
-        -- your toggleterm configuration here
-        -- or leave it empty to use the default settings
-      }
+      require('toggleterm').setup {}
 
       local function open_gitui()
         local git_dir = vim.fn.systemlist('git rev-parse --show-toplevel')[1]
@@ -26,7 +23,6 @@ return {
       -- Create a custom command
       vim.api.nvim_create_user_command('GitUI', open_gitui, {})
 
-      -- Set the keymapping
       vim.keymap.set('n', '<leader>gu', open_gitui, { noremap = true, silent = true, desc = 'Open GitUI' })
     end,
   },
