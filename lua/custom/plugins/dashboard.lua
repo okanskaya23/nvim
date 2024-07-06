@@ -29,15 +29,36 @@ return {
           {
             action = 'Telescope oldfiles',
             desc = ' Old Files',
-            icon = '',
+            icon = '󰪶',
             key = 'o',
+          },
+          {
+            action = 'NvimTreeToggle',
+            desc = ' File Tree',
+            icon = '',
+            key = 'e',
+          },
+          {
+            action = function()
+              local gitui = require('toggleterm.terminal').Terminal:new {
+                cmd = 'gitui',
+                direction = 'float',
+                float_opts = {
+                  border = 'double',
+                },
+              }
+              gitui:toggle()
+            end,
+            desc = ' GitUI',
+            icon = '󰊢',
+            key = 'g',
           },
           {
             action = function()
               vim.api.nvim_input '<cmd>qa<cr>'
             end,
             desc = ' Quit',
-            icon = ' ',
+            icon = '󰒲',
             key = 'q',
           },
         },
