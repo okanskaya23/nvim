@@ -19,26 +19,21 @@ return {
       dim_inactive = false,
       lualine_bold = false,
       plugins = {
-        auto = true, -- Disable auto plugin detection
+        auto = true,
       },
       on_highlights = function(hl, c)
-        -- Remove background for Normal float (affects Toggleterm)
         hl.NormalFloat = {
           bg = 'NONE',
         }
-        -- Remove background for terminal
         hl.Terminal = {
           bg = 'NONE',
         }
-        -- Ensure comments are not italic (as per your current config)
         hl.Comment = {
           fg = c.comment,
           italic = false,
         }
       end,
     }
-
-    -- Load the colorscheme
     vim.cmd.colorscheme 'tokyonight-night'
   end,
 }
