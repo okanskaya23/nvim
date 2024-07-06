@@ -23,7 +23,7 @@ return {
       -- Create a custom command
       vim.api.nvim_create_user_command('GitUI', open_gitui, {})
 
-      vim.keymap.set('n', '<leader>gu', open_gitui, { noremap = true, silent = true, desc = 'Open GitUI' })
+      vim.keymap.set('n', '<leader>g', open_gitui, { noremap = true, silent = true, desc = 'Open GitUI' })
     end,
   },
 }
