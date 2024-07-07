@@ -76,8 +76,11 @@ return { -- Fuzzy Finder (files, lsp, etc)
     vim.keymap.set('n', '<leader>fd', builtin.diagnostics, { desc = ' Find [D]iagnostics' })
     vim.keymap.set('n', '<leader>fc', builtin.resume, { desc = ' Find [R]esume' })
     vim.keymap.set('n', '<leader>fr', builtin.oldfiles, { desc = ' Find Recent Files ("." for repeat)' })
-    vim.keymap.set('n', '<leader><leader>', builtin.find_files, { desc = '[ ] Find existing buffers' })
-
+    vim.keymap.set('n', '<leader><leader>', function()
+      builtin.find_files {
+        find_command = { 'rg', '--files', '--hidden', '--glob', '!**/*.{prefab,meta}' },
+      }
+    end, { desc = '[ ] Find files (ignoring .prefab and .meta)' })
     -- Slightly advanced example of overriding default behavior and theme
     vim.keymap.set('n', '<leader>/', function()
       -- You can pass additional configuration to Telescope to change the theme, layout, etc.
