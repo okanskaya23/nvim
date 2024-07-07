@@ -25,7 +25,7 @@ return {
       require('nvim-tree').setup {
         filters = {
           dotfiles = false, -- Show dotfiles
-          custom = { '^.git$', '^node_modules$', '^.meta$', '^LICENSE$' }, -- Ignore files/dirs
+          custom = { '^.git$', '^node_modules$', '.meta', '^LICENSE$' }, -- Ignore files/dirs
           --exclude = { '.gitignore' }, -- Don't ignore .gitignore
         },
         update_focused_file = {
