@@ -40,7 +40,6 @@ return {
             gitsigns.nav_hunk 'prev'
           end
         end, { desc = 'Jump to previous git [c]hange' })
-
         -- Actions
         -- visual mode
         map('v', '<leader>hs', function()
