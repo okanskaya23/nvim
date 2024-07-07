@@ -1,2 +1,3 @@
 -- Add dap for unity 
 -- Resolve the harpoon and hank conflict
+-- Update status line for errors projectwise 
