@@ -13,7 +13,7 @@ return {
       map('n', '<leader>bo', '<Cmd>BufferLineCloseOthers<CR>', options)
       map('n', '<leader>br', '<Cmd>BufferLineCloseRight<CR>', options)
       map('n', '<leader>bl', '<Cmd>BufferLineCloseLeft<CR>', options)
-      map('n', '<leader>bb', '<Cmd>BufferLinePick<CR>', options)
+      map('n', '<leader>bn', '<Cmd>BufferLinePick<CR>', options)
       map('n', '<leader>bc', '<Cmd>BufferLinePickClose<CR>', options)
     end,
   },
