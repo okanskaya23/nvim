@@ -1,6 +1,6 @@
 return {
   'nvimdev/dashboard-nvim',
-  lazy = false, -- As https://github.com/nvimdev/dashboard-nvim/pull/450, dashboard-nvim shouldn't be lazy-loaded to properly handle stdin.
+  lazy = false,
   opts = function()
     local logo = [[
 
@@ -19,8 +19,6 @@ return {
     local opts = {
       theme = 'doom',
       hide = {
-        -- this is taken care of by lualine
-        -- enabling this messes up the actual laststatus setting after loading a file
         statusline = false,
       },
       config = {
