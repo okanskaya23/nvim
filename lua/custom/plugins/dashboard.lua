@@ -44,16 +44,9 @@ return {
           },
           {
             action = function()
-              local gitui = require('toggleterm.terminal').Terminal:new {
-                cmd = 'gitui',
-                direction = 'float',
-                float_opts = {
-                  border = 'double',
-                },
-              }
-              gitui:toggle()
+              _LAZYGIT_TOGGLE()
             end,
-            desc = ' GitUI',
+            desc = ' LazyGit',
             icon = '󰊢',
             key = 'g',
           },
