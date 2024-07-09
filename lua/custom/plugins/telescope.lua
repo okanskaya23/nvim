@@ -84,6 +84,7 @@ return { -- Fuzzy Finder (files, lsp, etc)
     vim.keymap.set('n', '<leader>fd', builtin.diagnostics, { desc = ' Find [D]iagnostics' })
     vim.keymap.set('n', '<leader>fc', builtin.resume, { desc = ' Find [R]esume' })
     vim.keymap.set('n', '<leader>fr', builtin.oldfiles, { desc = ' Find Recent Files ("." for repeat)' })
+    vim.keymap.set('n', '<leader>fg', builtin.git_status, { desc = ' Git [S]tatus' })
     vim.keymap.set('n', '<leader><leader>', function()
       builtin.find_files {
         find_command = { 'rg', '--files', '--hidden', '--glob', '!**/*.{prefab,meta}' },
