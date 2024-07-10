@@ -18,6 +18,45 @@ return { -- LSP Configuration & Plugins
     { 'folke/neodev.nvim', opts = {} },
   },
   config = function()
+    -- Diagnostic signs
+    local signs = {
+      Error = '',
+      Warn = '',
+      Hint = '',
+      Info = '',
+    }
+
+    for type, icon in pairs(signs) do
+      local hl = 'DiagnosticSign' .. type
+      vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = hl })
+    end
+
+    -- Diagnostic configuration
+    vim.diagnostic.config {
+      virtual_text = {
+        prefix = '', -- Could be '■', '▎', 'x', '●', etc.
+      },
+      signs = true,
+      underline = true,
+      update_in_insert = false,
+      severity_sort = true,
+    }
+
+    -- Diagnostic colors
+    vim.cmd [[
+  highlight! link DiagnosticSignError DiagnosticError
+  highlight! link DiagnosticSignWarn DiagnosticWarn
+  highlight! link DiagnosticSignHint DiagnosticHint
+  highlight! link DiagnosticSignInfo DiagnosticInfo
+]]
+
+    -- Your existing LSP configuration
+    vim.api.nvim_create_autocmd('LspAttach', {
+      group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
+      callback = function(event)
+        -- ... (keep your existing LspAttach callback)
+      end,
+    })
     vim.api.nvim_create_autocmd('LspAttach', {
       group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
       callback = function(event)
@@ -103,7 +142,21 @@ return { -- LSP Configuration & Plugins
       -- rust_analyzer = {},
       -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
       --
-      omnisharp = {},
+      omnisharp = {
+        cmd = { 'omnisharp' },
+        handlers = {
+          ['textDocument/definition'] = require('omnisharp_extended').handler,
+        },
+        enable_roslyn_analyzers = true,
+        organize_imports_on_format = true,
+        enable_import_completion = true,
+        sdk_include_prereleases = true,
+        analyze_open_documents_only = false,
+        enable_editorconfig_support = true,
+        enable_ms_build_load_projects_on_demand = true,
+        enable_decompilation_support = true,
+        enable_semantic_tokens = true,
+      },
       lua_ls = {
         -- cmd = {...},
         -- filetypes = { ...},
