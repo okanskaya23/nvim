@@ -51,9 +51,6 @@ require('lazy').setup({
     opts = {
       notify_on_error = false,
       format_on_save = function(bufnr)
-        -- Disable "format_on_save lsp_fallback" for languages that don't
-        -- have a well standardized coding style. You can add additional
-        -- languages here or re-enable it for the disabled ones.
         local disable_filetypes = { c = true, cpp = true, c_shar = true }
         return {
           timeout_ms = 500,
@@ -206,7 +203,26 @@ require('lazy').setup({
   {
     'nvim-lualine/lualine.nvim',
     config = function()
-      require('lualine').setup {}
+      local function get_project_diagnostics()
+        local total_errors = #vim.diagnostic.get(nil, { severity = vim.diagnostic.severity.ERROR })
+        local error_color = vim.api.nvim_get_hl_by_name('DiagnosticError', true).foreground
+        local error_color_hex = string.format('#%06x', error_color)
+
+        if total_errors > 0 then
+          return string.format('%%#DiagnosticError#󱡝:%d%%*', total_errors)
+        else
+          return '%#DiagnosticOk#%*' -- Green check mark
+        end
+      end
+
+      require('lualine').setup {
+        sections = {
+          lualine_x = {
+            { get_project_diagnostics },
+            -- other components...
+          },
+        },
+      }
     end,
     dependencies = { 'nvim-tree/nvim-web-devicons' },
   },
