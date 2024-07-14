@@ -51,6 +51,18 @@ return {
             key = 'g',
           },
           {
+            action = 'VimBeGood',
+            desc = ' VimBeGood',
+            icon = '󱩁',
+            key = 't',
+          },
+          {
+            action = 'checkhealth',
+            desc = ' Check Health',
+            icon = '',
+            key = 'h',
+          },
+          {
             action = function()
               vim.api.nvim_input '<cmd>qa<cr>'
             end,
