@@ -52,7 +52,7 @@ return {
           },
           {
             action = 'VimBeGood',
-            desc = ' VimBeGood',
+            desc = ' Vim Be Good',
             icon = '󱩁',
             key = 't',
           },
