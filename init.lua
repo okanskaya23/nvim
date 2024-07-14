@@ -206,11 +206,12 @@ require('lazy').setup({
       local function get_project_diagnostics()
         local total_errors = #vim.diagnostic.get(nil, { severity = vim.diagnostic.severity.ERROR })
         local error_color = vim.api.nvim_get_hl_by_name('DiagnosticError', true).foreground
-        local error_color_hex = string.format('#%06x', error_color)
 
         if total_errors > 0 then
+          vim.api.nvim_command 'highlight DiagnosticError gui=bold'
           return string.format('%%#DiagnosticError#󱡝:%d%%*', total_errors)
         else
+          vim.api.nvim_command 'highlight DiagnosticOk gui=bold'
           return '%#DiagnosticOk#%*' -- Green check mark
         end
       end
