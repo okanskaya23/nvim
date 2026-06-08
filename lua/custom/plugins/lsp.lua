@@ -1,62 +1,36 @@
-return { -- LSP Configuration & Plugins
+return {
   'neovim/nvim-lspconfig',
   dependencies = {
-    -- Automatically install LSPs and related tools to stdpath for Neovim
-    { 'williamboman/mason.nvim', config = true }, -- NOTE: Must be loaded before dependants
+    { 'williamboman/mason.nvim', opts = {} },
     'williamboman/mason-lspconfig.nvim',
     'WhoIsSethDaniel/mason-tool-installer.nvim',
     {
       'Hoffs/omnisharp-extended-lsp.nvim',
       lazy = true,
     },
-    -- Useful status updates for LSP.
-    -- NOTE: `opts = {}` is the same as calling `require('fidget').setup({})`
     { 'j-hui/fidget.nvim', opts = {} },
-
-    -- `neodev` configures Lua LSP for your Neovim config, runtime and plugins
-    -- used for completion, annotations and signatures of Neovim apis
     { 'folke/neodev.nvim', opts = {} },
   },
   config = function()
-    -- Diagnostic signs
-    local signs = {
-      Error = '',
-      Warn = '',
-      Hint = '',
-      Info = '',
+    local diagnostic_signs = {
+      [vim.diagnostic.severity.ERROR] = '',
+      [vim.diagnostic.severity.WARN] = '',
+      [vim.diagnostic.severity.HINT] = '',
+      [vim.diagnostic.severity.INFO] = '',
     }
 
-    for type, icon in pairs(signs) do
-      local hl = 'DiagnosticSign' .. type
-      vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = hl })
-    end
-
-    -- Diagnostic configuration
     vim.diagnostic.config {
       virtual_text = {
-        prefix = '', -- Could be '■', '▎', 'x', '●', etc.
+        prefix = '',
       },
-      signs = true,
+      signs = {
+        text = diagnostic_signs,
+      },
       underline = true,
       update_in_insert = false,
       severity_sort = true,
     }
 
-    -- Diagnostic colors
-    vim.cmd [[
-  highlight! link DiagnosticSignError DiagnosticError
-  highlight! link DiagnosticSignWarn DiagnosticWarn
-  highlight! link DiagnosticSignHint DiagnosticHint
-  highlight! link DiagnosticSignInfo DiagnosticInfo
-]]
-
-    -- Your existing LSP configuration
-    vim.api.nvim_create_autocmd('LspAttach', {
-      group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
-      callback = function(event)
-        -- ... (keep your existing LspAttach callback)
-      end,
-    })
     vim.api.nvim_create_autocmd('LspAttach', {
       group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
       callback = function(event)
@@ -64,30 +38,21 @@ return { -- LSP Configuration & Plugins
           vim.keymap.set('n', keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
         end
 
-        --  To jump back, press <C-t>.
         map('gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
-
         map('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
-
         map('gI', require('telescope.builtin').lsp_implementations, '[G]oto [I]mplementation')
-
         map('<leader>D', require('telescope.builtin').lsp_type_definitions, 'Type [D]efinition')
-
         map('<leader>ds', require('telescope.builtin').lsp_document_symbols, '[D]ocument [S]ymbols')
-
         map('<leader>ws', require('telescope.builtin').lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
-
         map('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
-
         map('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction')
-
         map('K', vim.lsp.buf.hover, 'Hover Documentation')
-
         map('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
 
         local client = vim.lsp.get_client_by_id(event.data.client_id)
         if client and client.server_capabilities.documentHighlightProvider then
           local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
+          vim.api.nvim_clear_autocmds { group = highlight_augroup, buffer = event.buf }
           vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
             buffer = event.buf,
             group = highlight_augroup,
@@ -104,103 +69,109 @@ return { -- LSP Configuration & Plugins
             group = vim.api.nvim_create_augroup('kickstart-lsp-detach', { clear = true }),
             callback = function(event2)
               vim.lsp.buf.clear_references()
-              vim.api.nvim_clear_autocmds { group = 'kickstart-lsp-highlight', buffer = event2.buf }
+              vim.api.nvim_clear_autocmds { group = highlight_augroup, buffer = event2.buf }
             end,
           })
         end
 
-        -- The following autocommand is used to enable inlay hints in your
-        -- code, if the language server you are using supports them
-        --
-        -- This may be unwanted, since they displace some of your code
         if client and client.server_capabilities.inlayHintProvider and vim.lsp.inlay_hint then
           map('<leader>th', function()
-            vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled())
+            local enabled = vim.lsp.inlay_hint.is_enabled { bufnr = event.buf }
+            vim.lsp.inlay_hint.enable(not enabled, { bufnr = event.buf })
           end, '[T]oggle Inlay [H]ints')
         end
       end,
     })
 
-    -- LSP servers and clients are able to communicate to each other what features they support.
-    --  By default, Neovim doesn't support everything that is in the LSP specification.
-    --  When you add nvim-cmp, luasnip, etc. Neovim now has *more* capabilities.
-    --  So, we create new capabilities with nvim cmp, and then broadcast that to the servers.
-    local capabilities = vim.lsp.protocol.make_client_capabilities()
-    capabilities = vim.tbl_deep_extend('force', capabilities, require('cmp_nvim_lsp').default_capabilities())
+    local capabilities = vim.tbl_deep_extend('force', vim.lsp.protocol.make_client_capabilities(), require('cmp_nvim_lsp').default_capabilities())
 
-    -- Enable the following language servers
-    --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
-    --
-    --  Add any additional override configuration in the following tables. Available keys are:
-    --  - cmd (table): Override the default command used to start the server
-    --  - filetypes (table): Override the default list of associated filetypes for the server
-    --  - capabilities (table): Override fields in capabilities. Can be used to disable certain LSP features.
-    --  - settings (table): Override the default settings passed when initializing the server.
-    --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
+    local function executable(name)
+      local mason_path = vim.fn.stdpath 'data' .. '/mason/bin/' .. name
+      if vim.fn.executable(mason_path) == 1 then
+        return mason_path
+      end
+
+      local path = vim.fn.exepath(name)
+      return path ~= '' and path or name
+    end
+
+    local has_dotnet = vim.fn.executable 'dotnet' == 1
+    local omnisharp_cmd = has_dotnet and 'OmniSharp' or 'omnisharp-mono'
+    local omnisharp_package = has_dotnet and 'omnisharp' or 'omnisharp-mono'
+    local omnisharp_args = {
+      executable(omnisharp_cmd),
+      '-z',
+      '--hostPID',
+      tostring(vim.fn.getpid()),
+      'DotNet:enablePackageRestore=false',
+    }
+
+    if has_dotnet then
+      vim.list_extend(omnisharp_args, { '--encoding', 'utf-8' })
+    end
+
+    vim.list_extend(omnisharp_args, { '--languageserver' })
+
     local servers = {
-      -- pyright = {},
-      -- rust_analyzer = {},
-      -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
-      --
       omnisharp = {
-        cmd = { 'omnisharp' },
+        cmd = omnisharp_args,
         handlers = {
           ['textDocument/definition'] = require('omnisharp_extended').handler,
         },
-        enable_roslyn_analyzers = true,
-        organize_imports_on_format = true,
-        enable_import_completion = true,
-        sdk_include_prereleases = true,
-        analyze_open_documents_only = false,
-        enable_editorconfig_support = true,
-        enable_ms_build_load_projects_on_demand = true,
-        enable_decompilation_support = true,
-        enable_semantic_tokens = true,
+        settings = {
+          FormattingOptions = {
+            EnableEditorConfigSupport = true,
+            OrganizeImports = true,
+          },
+          MsBuild = {
+            LoadProjectsOnDemand = true,
+          },
+          RoslynExtensionsOptions = {
+            EnableAnalyzersSupport = true,
+            EnableDecompilationSupport = true,
+            EnableImportCompletion = true,
+            AnalyzeOpenDocumentsOnly = false,
+          },
+          RenameOptions = {
+            RenameInComments = true,
+            RenameInStrings = true,
+            RenameOverloads = true,
+          },
+          Sdk = {
+            IncludePrereleases = true,
+          },
+        },
       },
       lua_ls = {
-        -- cmd = {...},
-        -- filetypes = { ...},
-        -- capabilities = {},
         settings = {
           Lua = {
             completion = {
               callSnippet = 'Replace',
             },
-            -- You can toggle below to ignore Lua_LS's noisy `missing-fields` warnings
-            -- diagnostics = { disable = { 'missing-fields' } },
           },
         },
       },
     }
 
-    -- Ensure the servers and tools above are installed
-    --  To check the current status of installed tools and/or manually install
-    --  other tools, you can run
-    --    :Mason
-    --
-    --  You can press `g?` for help in this menu.
-    require('mason').setup()
+    for server_name, server in pairs(servers) do
+      server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
+      vim.lsp.config(server_name, server)
+    end
 
-    -- You can add other tools here that you want Mason to install
-    -- for you, so that they are available from within Neovim.
-    local ensure_installed = vim.tbl_keys(servers or {})
-    vim.list_extend(ensure_installed, {
-      'omnisharp', -- Add this line for C# support
-      'stylua', -- Used to format Lua code
-    })
-    require('mason-tool-installer').setup { ensure_installed = ensure_installed }
-
-    require('mason-lspconfig').setup {
-      handlers = {
-        function(server_name)
-          local server = servers[server_name] or {}
-          -- This handles overriding only values explicitly passed
-          -- by the server configuration above. Useful when disabling
-          -- certain features of an LSP (for example, turning off formatting for tsserver)
-          server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
-          require('lspconfig')[server_name].setup(server)
-        end,
+    require('mason-tool-installer').setup {
+      ensure_installed = {
+        omnisharp_package,
+        'stylua',
       },
     }
+
+    require('mason-lspconfig').setup {
+      ensure_installed = {
+        'lua_ls',
+      },
+      automatic_enable = false,
+    }
+
+    vim.lsp.enable(vim.tbl_keys(servers))
   end,
 }

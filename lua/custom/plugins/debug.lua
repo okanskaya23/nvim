@@ -5,19 +5,50 @@ return {
   dependencies = {
     'rcarriga/nvim-dap-ui',
     'nvim-neotest/nvim-nio',
-    'williamboman/mason.nvim',
-    'jay-babu/mason-nvim-dap.nvim',
   },
   config = function()
     local dap = require 'dap'
     local dapui = require 'dapui'
 
-    require('mason-nvim-dap').setup {
-      automatic_installation = true,
-      handlers = {},
+    local function executable(name)
+      local mason_path = vim.fn.stdpath 'data' .. '/mason/bin/' .. name
+      if vim.fn.executable(mason_path) == 1 then
+        return mason_path
+      end
 
-      ensure_installed = {
-        'delve',
+      local path = vim.fn.exepath(name)
+      return path ~= '' and path or name
+    end
+
+    dap.adapters.coreclr = {
+      type = 'executable',
+      command = executable 'netcoredbg',
+      args = { '--interpreter=vscode' },
+    }
+
+    if vim.fn.has 'win32' == 1 then
+      dap.adapters.coreclr.options = {
+        detached = false,
+      }
+    end
+
+    dap.configurations.cs = {
+      {
+        type = 'coreclr',
+        name = 'Launch .NET assembly',
+        request = 'launch',
+        program = function()
+          return vim.fn.input('Path to dll: ', vim.fn.getcwd() .. '/bin/Debug/', 'file')
+        end,
+        cwd = '${workspaceFolder}',
+        stopAtEntry = false,
+      },
+      {
+        type = 'coreclr',
+        name = 'Attach to .NET process',
+        request = 'attach',
+        processId = require('dap.utils').pick_process,
+        cwd = '${workspaceFolder}',
       },
     }
 

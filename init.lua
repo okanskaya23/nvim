@@ -1,10 +1,10 @@
 require 'functions.vimOptions'
 
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
-if not vim.loop.fs_stat(lazypath) then
+if not vim.uv.fs_stat(lazypath) then
   local lazyrepo = 'https://github.com/folke/lazy.nvim.git'
   vim.fn.system { 'git', 'clone', '--filter=blob:none', '--branch=stable', lazyrepo, lazypath }
-end ---@diagnostic disable-next-line: undefined-field
+end
 vim.opt.rtp:prepend(lazypath)
 
 require('lazy').setup({
@@ -16,22 +16,20 @@ require('lazy').setup({
     'folke/which-key.nvim',
     event = 'VimEnter', -- Sets the loading event to 'VimEnter'
     config = function() -- This is the function that runs, AFTER loading
-      require('which-key').setup()
+      local wk = require 'which-key'
+      wk.setup()
 
       -- Document existing key chains
-      require('which-key').register {
-        ['<leader>c'] = { name = '[C]ode', _ = 'which_key_ignore' },
-        ['<leader>d'] = { name = '[D]ocument', _ = 'which_key_ignore' },
-        ['<leader>r'] = { name = '[R]ename', _ = 'which_key_ignore' },
-        ['<leader>s'] = { name = '[S]earch', _ = 'which_key_ignore' },
-        ['<leader>w'] = { name = '[W]orkspace', _ = 'which_key_ignore' },
-        ['<leader>t'] = { name = '[T]oggle', _ = 'which_key_ignore' },
+      wk.add {
+        { '<leader>c', group = '[C]ode' },
+        { '<leader>d', group = '[D]ocument' },
+        { '<leader>r', group = '[R]ename' },
+        { '<leader>s', group = '[S]earch' },
+        { '<leader>w', group = '[W]orkspace' },
+        { '<leader>t', group = '[T]oggle' },
+        { '<leader>h', group = 'Git [H]unk', mode = 'v' },
         --    ['<leader>gh'] = { name = 'Git [H]unk', _ = 'which_key_ignore' },
       }
-      -- visual mode
-      require('which-key').register({
-        ['<leader>h'] = { 'Git [H]unk' },
-      }, { mode = 'v' })
     end,
   },
 
@@ -42,7 +40,7 @@ require('lazy').setup({
       {
         '<leader>cf',
         function()
-          require('conform').format { async = true, lsp_fallback = true }
+          require('conform').format { async = true, lsp_format = 'fallback' }
         end,
         mode = '',
         desc = '[F]ormat buffer',
@@ -51,15 +49,15 @@ require('lazy').setup({
     opts = {
       notify_on_error = false,
       format_on_save = function(bufnr)
-        local disable_filetypes = { c = true, cpp = true, c_shar = true }
+        local disable_filetypes = { c = true, cpp = true }
         return {
           timeout_ms = 500,
-          lsp_fallback = not disable_filetypes[vim.bo[bufnr].filetype],
+          lsp_format = disable_filetypes[vim.bo[bufnr].filetype] and 'never' or 'fallback',
         }
       end,
       formatters_by_ft = {
         lua = { 'stylua' },
-        cs = { 'dotnet_format' },
+        cs = vim.fn.executable 'dotnet' == 1 and { 'csharpier', lsp_format = 'fallback' } or nil,
         -- Conform can also run multiple formatters sequentially
         -- python = { "isort", "black" },
         --
@@ -205,13 +203,10 @@ require('lazy').setup({
     config = function()
       local function get_project_diagnostics()
         local total_errors = #vim.diagnostic.get(nil, { severity = vim.diagnostic.severity.ERROR })
-        local error_color = vim.api.nvim_get_hl_by_name('DiagnosticError', true).foreground
 
         if total_errors > 0 then
-          vim.api.nvim_command 'highlight DiagnosticError gui=bold'
           return string.format('%%#DiagnosticError#󱡝:%d%%*', total_errors)
         else
-          vim.api.nvim_command 'highlight DiagnosticOk gui=bold'
           return '%#DiagnosticOk#%*' -- Green check mark
         end
       end
