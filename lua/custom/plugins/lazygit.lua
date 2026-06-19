@@ -48,7 +48,7 @@ return {
       vim.api.nvim_create_user_command('LazyGitReset', _LAZYGIT_RESET, {})
 
       -- Keymaps
-      vim.keymap.set('n', '<leader>g', _LAZYGIT_TOGGLE, { noremap = true, silent = true, desc = 'Toggle LazyGit' })
+      vim.keymap.set('n', '<leader>gg', _LAZYGIT_TOGGLE, { noremap = true, silent = true, desc = 'Toggle LazyGit' })
       vim.keymap.set('n', '<C-g>', _LAZYGIT_RESET, { noremap = true, silent = true, desc = 'Reset LazyGit' })
     end,
   },
