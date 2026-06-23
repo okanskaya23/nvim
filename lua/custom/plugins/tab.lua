@@ -7,7 +7,7 @@ return {
       require('bufferline').setup {}
       local map = vim.api.nvim_set_keymap
 
-      options = { noremap = true, silent = true }
+      local options = { noremap = true, silent = true }
 
       map('n', '<leader>bp', '<Cmd>BufferLineTogglePin<CR>', options)
       map('n', '<leader>bo', '<Cmd>BufferLineCloseOthers<CR>', options)

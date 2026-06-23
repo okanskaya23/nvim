@@ -181,6 +181,7 @@ require('lazy').setup({
 
   { -- Collection of various small independent plugins/modules
     'echasnovski/mini.nvim',
+    event = 'VeryLazy',
     config = function()
       -- Better Around/Inside textobjects
       --
@@ -201,11 +202,48 @@ require('lazy').setup({
   {
     'nvim-lualine/lualine.nvim',
     config = function()
-      local function get_project_diagnostics()
-        local total_errors = #vim.diagnostic.get(nil, { severity = vim.diagnostic.severity.ERROR })
+      local diagnostic_error_counts = {}
+      local total_diagnostic_errors = 0
 
-        if total_errors > 0 then
-          return string.format('%%#DiagnosticError#󱡝:%d%%*', total_errors)
+      local function update_buffer_diagnostics(bufnr)
+        local previous = diagnostic_error_counts[bufnr] or 0
+        local current = #vim.diagnostic.get(bufnr, { severity = vim.diagnostic.severity.ERROR })
+
+        if current == 0 then
+          diagnostic_error_counts[bufnr] = nil
+        else
+          diagnostic_error_counts[bufnr] = current
+        end
+
+        total_diagnostic_errors = total_diagnostic_errors + current - previous
+      end
+
+      for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+        if vim.api.nvim_buf_is_loaded(bufnr) then
+          update_buffer_diagnostics(bufnr)
+        end
+      end
+
+      vim.api.nvim_create_autocmd('DiagnosticChanged', {
+        group = vim.api.nvim_create_augroup('lualine-diagnostic-counts', { clear = true }),
+        callback = function(event)
+          update_buffer_diagnostics(event.buf)
+          vim.cmd.redrawstatus()
+        end,
+      })
+
+      vim.api.nvim_create_autocmd('BufWipeout', {
+        group = vim.api.nvim_create_augroup('lualine-diagnostic-cleanup', { clear = true }),
+        callback = function(event)
+          local previous = diagnostic_error_counts[event.buf] or 0
+          diagnostic_error_counts[event.buf] = nil
+          total_diagnostic_errors = total_diagnostic_errors - previous
+        end,
+      })
+
+      local function get_project_diagnostics()
+        if total_diagnostic_errors > 0 then
+          return string.format('%%#DiagnosticError#󱡝:%d%%*', total_diagnostic_errors)
         else
           return '%#DiagnosticOk#%*' -- Green check mark
         end
@@ -224,6 +262,7 @@ require('lazy').setup({
   },
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
+    event = { 'BufReadPost', 'BufNewFile' },
     build = ':TSUpdate',
     opts = {
       ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'vim', 'vimdoc', 'c_sharp' },
@@ -294,33 +333,15 @@ require('lazy').setup({
     },
   },
 })
-local function load_modules(directory)
-  local modules = {}
-  local config_dir = vim.fn.stdpath 'config'
-  local full_path = config_dir .. '/lua/' .. directory
-
-  for _, file in ipairs(vim.fn.readdir(full_path, [[v:val =~ '\.lua$']])) do
-    local module_name = file:gsub('%.lua$', '')
-    local ok, module = pcall(require, directory .. '.' .. module_name)
-    if ok then
-      modules[module_name] = module
-    else
-      print('Error loading module ' .. module_name .. ': ' .. module)
-    end
-  end
-
-  return modules
-end
-
--- Load all modules from the 'functions' directory
-local functions = load_modules 'functions'
+require 'functions.format_paste'
+local cs_template = require 'functions.cs_template'
 
 vim.api.nvim_create_autocmd({ 'BufNewFile', 'BufRead' }, {
   pattern = { '*.cs' },
   callback = function()
     -- Check if the file is empty
     if vim.fn.line '$' == 1 and vim.fn.getline(1) == '' then
-      functions.cs_template.create_cs_template()
+      cs_template.create_cs_template()
     end
   end,
 })

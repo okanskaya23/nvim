@@ -2,12 +2,18 @@ return {
 
   { -- Linting
     'mfussenegger/nvim-lint',
-    event = { 'BufReadPre', 'BufNewFile' },
+    ft = { 'markdown' },
     config = function()
       local lint = require 'lint'
-      lint.linters_by_ft = {
-        markdown = { 'markdownlint' },
-      }
+      local function executable(name)
+        local mason_path = vim.fn.stdpath 'data' .. '/mason/bin/' .. name
+        return vim.fn.executable(mason_path) == 1 or vim.fn.executable(name) == 1
+      end
+
+      lint.linters_by_ft = {}
+      if executable 'markdownlint' then
+        lint.linters_by_ft.markdown = { 'markdownlint' }
+      end
 
       -- To allow other plugins to add linters to require('lint').linters_by_ft,
       -- instead set linters_by_ft like this:
@@ -44,10 +50,14 @@ return {
       -- Create autocommand which carries out the actual linting
       -- on the specified events.
       local lint_augroup = vim.api.nvim_create_augroup('lint', { clear = true })
-      vim.api.nvim_create_autocmd({ 'BufEnter', 'BufWritePost', 'InsertLeave' }, {
+      vim.api.nvim_create_autocmd({ 'BufReadPost', 'BufWritePost' }, {
         group = lint_augroup,
-        callback = function()
-          require('lint').try_lint()
+        callback = function(event)
+          if not lint.linters_by_ft[vim.bo[event.buf].filetype] then
+            return
+          end
+
+          lint.try_lint(nil, { bufnr = event.buf })
         end,
       })
     end,

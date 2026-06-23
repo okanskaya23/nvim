@@ -43,9 +43,7 @@ return {
             key = 'e',
           },
           {
-            action = function()
-              _LAZYGIT_TOGGLE()
-            end,
+            action = 'LazyGit',
             desc = ' LazyGit',
             icon = '󰊢',
             key = 'g',

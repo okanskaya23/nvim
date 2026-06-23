@@ -1,19 +1,17 @@
 local M = {}
 
 local function find_project_root()
-  -- List of common root indicators
-  local root_indicators = { '.git', '.sln', '.csproj' }
-
-  local current_dir = vim.fn.expand '%:p:h'
-  while current_dir ~= '/' do
-    for _, indicator in ipairs(root_indicators) do
-      if vim.fn.filereadable(current_dir .. '/' .. indicator) == 1 or vim.fn.isdirectory(current_dir .. '/' .. indicator) == 1 then
-        return current_dir
-      end
-    end
-    current_dir = vim.fn.fnamemodify(current_dir, ':h')
+  local file_name = vim.api.nvim_buf_get_name(0)
+  local start_dir = vim.fs.dirname(file_name)
+  if not start_dir then
+    return nil
   end
-  return nil
+
+  local matches = vim.fs.find(function(name)
+    return name == '.git' or name:match '%.sln$' or name:match '%.csproj$'
+  end, { path = start_dir, upward = true, limit = 1 })
+
+  return matches[1] and vim.fs.dirname(matches[1]) or nil
 end
 
 function M.create_cs_template()
@@ -50,7 +48,6 @@ namespace %s
 }
 ]],
     namespace,
-    file_name,
     file_name
   )
 

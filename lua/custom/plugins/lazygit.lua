@@ -2,6 +2,11 @@ return {
   {
     'akinsho/toggleterm.nvim',
     version = '*',
+    cmd = { 'LazyGit', 'LazyGitReset', 'ToggleTerm' },
+    keys = {
+      { '<leader>gg', '<cmd>LazyGit<cr>', desc = 'Toggle LazyGit' },
+      { '<C-g>', '<cmd>LazyGitReset<cr>', desc = 'Reset LazyGit' },
+    },
     dependencies = { 'williamboman/mason.nvim' },
     config = function()
       require('toggleterm').setup {}
@@ -46,10 +51,6 @@ return {
       -- User Commands
       vim.api.nvim_create_user_command('LazyGit', _LAZYGIT_TOGGLE, {})
       vim.api.nvim_create_user_command('LazyGitReset', _LAZYGIT_RESET, {})
-
-      -- Keymaps
-      vim.keymap.set('n', '<leader>gg', _LAZYGIT_TOGGLE, { noremap = true, silent = true, desc = 'Toggle LazyGit' })
-      vim.keymap.set('n', '<C-g>', _LAZYGIT_RESET, { noremap = true, silent = true, desc = 'Reset LazyGit' })
     end,
   },
 }

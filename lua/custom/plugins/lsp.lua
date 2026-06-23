@@ -1,5 +1,6 @@
 return {
   'neovim/nvim-lspconfig',
+  event = { 'BufReadPre', 'BufNewFile' },
   dependencies = {
     { 'williamboman/mason.nvim', opts = {} },
     'williamboman/mason-lspconfig.nvim',
@@ -45,20 +46,46 @@ return {
       return vim.uri_to_fname(uri)
     end
 
-    local function omnisharp_definition_params(client, bufnr)
+    local function omnisharp_position_params(client, bufnr)
       local params = vim.lsp.util.make_position_params(0, client.offset_encoding)
       return {
         fileName = omnisharp_file_name(bufnr, params.textDocument.uri),
         column = params.position.character,
         line = params.position.line,
-        timeout = 30000,
-        wantMetadata = true,
       }
     end
 
-    local function omnisharp_load_virtual_definition(definition, client)
+    local function omnisharp_definition_params(client, bufnr)
+      return vim.tbl_extend('force', omnisharp_position_params(client, bufnr), {
+        timeout = 10000,
+        wantMetadata = true,
+      })
+    end
+
+    local omnisharp_utils_loaded = false
+    local omnisharp_utils = nil
+
+    local function get_omnisharp_utils()
+      if omnisharp_utils_loaded then
+        return omnisharp_utils
+      end
+
+      omnisharp_utils_loaded = true
       local ok, utils = pcall(require, 'omnisharp_utils')
-      if not ok then
+      if ok then
+        omnisharp_utils = utils
+      end
+
+      return omnisharp_utils
+    end
+
+    local function omnisharp_load_virtual_definition(definition, client)
+      if type(definition.MetadataSource) ~= 'table' and type(definition.SourceGeneratedFileInfo) ~= 'table' then
+        return definition.Location.FileName
+      end
+
+      local utils = get_omnisharp_utils()
+      if not utils then
         return definition.Location.FileName
       end
 
@@ -94,7 +121,7 @@ return {
           local range = definition.Location.Range
           if file_name and type(range) == 'table' then
             table.insert(locations, {
-              uri = 'file://' .. file_name,
+              uri = vim.uri_from_fname(file_name),
               range = {
                 start = {
                   line = range.Start.Line,
@@ -129,6 +156,36 @@ return {
       vim.cmd.copen()
     end
 
+    local function omnisharp_location_uri(location)
+      return location.uri or location.targetUri
+    end
+
+    local function omnisharp_location_needs_extended(location)
+      local uri = omnisharp_location_uri(location)
+      if not uri then
+        return true
+      end
+
+      local ok, file_name = pcall(vim.uri_to_fname, uri)
+      if not ok or not file_name then
+        return true
+      end
+
+      return file_name:find '%$metadata%$' ~= nil or vim.uv.fs_stat(file_name) == nil
+    end
+
+    local function omnisharp_normalize_locations(result)
+      if not result then
+        return {}
+      end
+
+      if vim.islist(result) then
+        return result
+      end
+
+      return { result }
+    end
+
     local function omnisharp_goto_definition()
       local bufnr = vim.api.nvim_get_current_buf()
       local client = omnisharp_get_client(bufnr)
@@ -147,8 +204,87 @@ return {
       end, bufnr)
     end
 
+    local function omnisharp_fast_definition()
+      local bufnr = vim.api.nvim_get_current_buf()
+      local client = omnisharp_get_client(bufnr)
+      if not client then
+        vim.notify 'OmniSharp is not attached'
+        return
+      end
+
+      local params = vim.lsp.util.make_position_params(0, client.offset_encoding)
+      client.request('textDocument/definition', params, function(err, result)
+        if err then
+          vim.notify('OmniSharp definition failed: ' .. (err.message or vim.inspect(err)), vim.log.levels.ERROR)
+          return
+        end
+
+        local locations = omnisharp_normalize_locations(result)
+        if #locations == 0 or vim.iter(locations):any(omnisharp_location_needs_extended) then
+          omnisharp_goto_definition()
+          return
+        end
+
+        omnisharp_show_locations(locations, client)
+      end, bufnr)
+    end
+
+    local function omnisharp_references()
+      local bufnr = vim.api.nvim_get_current_buf()
+      local client = omnisharp_get_client(bufnr)
+      if not client then
+        vim.notify 'OmniSharp is not attached'
+        return
+      end
+
+      client.request('o#/findusages', vim.tbl_extend('force', omnisharp_position_params(client, bufnr), { excludeDefinition = true }), function(err, result)
+        if err then
+          vim.notify('OmniSharp references failed: ' .. (err.message or vim.inspect(err)), vim.log.levels.ERROR)
+          return
+        end
+
+        local quickfixes = result and result.QuickFixes
+        if type(quickfixes) ~= 'table' or vim.tbl_isempty(quickfixes) then
+          vim.notify 'No references found'
+          return
+        end
+
+        local items = {}
+        for _, quickfix in ipairs(quickfixes) do
+          if type(quickfix) == 'table' and quickfix.FileName then
+            table.insert(items, {
+              filename = quickfix.FileName,
+              lnum = (quickfix.Line or 0) + 1,
+              col = (quickfix.Column or 0) + 1,
+              end_lnum = quickfix.EndLine and (quickfix.EndLine + 1) or nil,
+              end_col = quickfix.EndColumn and (quickfix.EndColumn + 1) or nil,
+              text = quickfix.Text or '',
+            })
+          end
+        end
+
+        if vim.tbl_isempty(items) then
+          vim.notify 'No references found'
+          return
+        end
+
+        vim.fn.setqflist({}, ' ', { title = 'LSP References', items = items })
+        vim.cmd.copen()
+      end, bufnr)
+    end
+
+    local function telescope_picker(name)
+      return function()
+        require('telescope.builtin')[name]()
+      end
+    end
+
+    local lsp_attach_augroup = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true })
+    local lsp_highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = true })
+    local lsp_detach_augroup = vim.api.nvim_create_augroup('kickstart-lsp-detach', { clear = true })
+
     vim.api.nvim_create_autocmd('LspAttach', {
-      group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
+      group = lsp_attach_augroup,
       callback = function(event)
         local client = vim.lsp.get_client_by_id(event.data.client_id)
         local is_omnisharp = client and client.name == 'omnisharp'
@@ -162,45 +298,51 @@ return {
         end
 
         if is_omnisharp then
-          local omnisharp = require 'omnisharp_extended'
-          map('gd', omnisharp_goto_definition, '[G]oto [D]efinition')
-          map('gr', omnisharp.lsp_references, '[G]oto [R]eferences')
-          map('gI', omnisharp.lsp_implementation, '[G]oto [I]mplementation')
-          map('<leader>D', omnisharp.lsp_type_definition, 'Type [D]efinition')
+          map('gd', omnisharp_fast_definition, '[G]oto [D]efinition')
+          map('<leader>cD', omnisharp_goto_definition, '[C]# Metadata [D]efinition')
+          map('gr', omnisharp_references, '[G]oto [R]eferences')
+          map('grr', omnisharp_references, '[G]oto [R]eferences')
+          map('gI', function()
+            require('omnisharp_extended').lsp_implementation()
+          end, '[G]oto [I]mplementation')
+          map('<leader>D', function()
+            require('omnisharp_extended').lsp_type_definition()
+          end, 'Type [D]efinition')
         else
-          map('gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
-          map('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
-          map('gI', require('telescope.builtin').lsp_implementations, '[G]oto [I]mplementation')
-          map('<leader>D', require('telescope.builtin').lsp_type_definitions, 'Type [D]efinition')
+          map('gd', telescope_picker 'lsp_definitions', '[G]oto [D]efinition')
+          map('gr', telescope_picker 'lsp_references', '[G]oto [R]eferences')
+          map('gI', telescope_picker 'lsp_implementations', '[G]oto [I]mplementation')
+          map('<leader>D', telescope_picker 'lsp_type_definitions', 'Type [D]efinition')
         end
 
-        map('<leader>ds', require('telescope.builtin').lsp_document_symbols, '[D]ocument [S]ymbols')
-        map('<leader>ws', require('telescope.builtin').lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
+        map('<leader>ds', telescope_picker 'lsp_document_symbols', '[D]ocument [S]ymbols')
+        map('<leader>ws', telescope_picker 'lsp_dynamic_workspace_symbols', '[W]orkspace [S]ymbols')
         map('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
         map('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction')
         map('K', vim.lsp.buf.hover, 'Hover Documentation')
         map('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
 
         if client and client.server_capabilities.documentHighlightProvider then
-          local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
-          vim.api.nvim_clear_autocmds { group = highlight_augroup, buffer = event.buf }
-          vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
+          vim.api.nvim_clear_autocmds { group = lsp_highlight_augroup, buffer = event.buf }
+          vim.api.nvim_create_autocmd('CursorHold', {
             buffer = event.buf,
-            group = highlight_augroup,
+            group = lsp_highlight_augroup,
             callback = vim.lsp.buf.document_highlight,
           })
 
-          vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
+          vim.api.nvim_create_autocmd('CursorMoved', {
             buffer = event.buf,
-            group = highlight_augroup,
+            group = lsp_highlight_augroup,
             callback = vim.lsp.buf.clear_references,
           })
 
+          vim.api.nvim_clear_autocmds { group = lsp_detach_augroup, buffer = event.buf }
           vim.api.nvim_create_autocmd('LspDetach', {
-            group = vim.api.nvim_create_augroup('kickstart-lsp-detach', { clear = true }),
+            buffer = event.buf,
+            group = lsp_detach_augroup,
             callback = function(event2)
               vim.lsp.buf.clear_references()
-              vim.api.nvim_clear_autocmds { group = highlight_augroup, buffer = event2.buf }
+              vim.api.nvim_clear_autocmds { group = lsp_highlight_augroup, buffer = event2.buf }
             end,
           })
         end
@@ -328,7 +470,14 @@ return {
         },
         root_dir = function(bufnr, on_dir)
           local name = vim.api.nvim_buf_get_name(bufnr)
-          local root = vim.fs.root(name, '*.sln') or vim.fs.root(name, '*.csproj') or vim.fs.root(name, { 'ProjectSettings', 'Packages', 'Assets' })
+          local start_dir = vim.fs.dirname(name)
+          local project_markers = vim.fs.find(function(marker)
+            return marker:match '%.sln$' ~= nil or marker:match '%.csproj$' ~= nil
+          end, { path = start_dir, upward = true, limit = 1 })
+          local unity_markers = vim.fs.find(function(marker)
+            return marker == 'ProjectSettings' or marker == 'Packages' or marker == 'Assets'
+          end, { path = start_dir, upward = true, limit = 1 })
+          local root = project_markers[1] and vim.fs.dirname(project_markers[1]) or unity_markers[1] and vim.fs.dirname(unity_markers[1]) or nil
           if root then
             on_dir(root)
           end
@@ -343,7 +492,7 @@ return {
             LoadProjectsOnDemand = true,
           },
           RoslynExtensionsOptions = {
-            EnableAnalyzersSupport = true,
+            EnableAnalyzersSupport = false,
             EnableDecompilationSupport = true,
             EnableImportCompletion = false,
             AnalyzeOpenDocumentsOnly = true,

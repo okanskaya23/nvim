@@ -2,17 +2,23 @@ return {
   {
     'CopilotC-Nvim/CopilotChat.nvim',
     branch = 'main',
+    cmd = {
+      'CopilotChat',
+      'CopilotChatOpen',
+      'CopilotChatToggle',
+      'CopilotChatOptimize',
+    },
+    keys = {
+      { '<leader>ac', '<cmd>CopilotChatToggle<cr>', mode = 'n', desc = 'Open Copilot Chat' },
+      { '<leader>ao', '<cmd>CopilotChatOptimize<cr>', mode = 'v', desc = 'Optimize with Copilot Chat' },
+    },
     dependencies = {
       { 'zbirenbaum/copilot.lua' }, -- or github/copilot.vim
       { 'nvim-lua/plenary.nvim' }, -- for curl, log wrapper
     },
     opts = {
-      debug = true, -- Enable debugging
+      debug = false,
       -- See Configuration section for rest
     },
   },
-
-  -- Map <leader>ac to :CopilotChatOpen with description
-  vim.api.nvim_set_keymap('n', '<leader>ac', ':CopilotChatToggle<CR>', { noremap = true, silent = true, desc = 'Open Copilot Chat' }),
-  vim.api.nvim_set_keymap('v', '<leader>ao', ':CopilotChatOptimize<CR>', { noremap = true, silent = true, desc = 'Open Copilot Chat' }),
 }
