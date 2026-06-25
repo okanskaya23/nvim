@@ -57,7 +57,8 @@ require('lazy').setup({
       end,
       formatters_by_ft = {
         lua = { 'stylua' },
-        cs = vim.fn.executable 'dotnet' == 1 and { 'csharpier', lsp_format = 'fallback' } or nil,
+        -- C# (cs) intentionally omitted: conform then uses its LSP-format fallback, so Roslyn
+        -- formats the buffer AND organizes imports on save (see csharp|formatting in lsp.lua).
         -- Conform can also run multiple formatters sequentially
         -- python = { "isort", "black" },
         --
@@ -262,6 +263,7 @@ require('lazy').setup({
   },
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
+    branch = 'master',
     event = { 'BufReadPost', 'BufNewFile' },
     build = ':TSUpdate',
     opts = {

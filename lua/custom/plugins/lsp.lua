@@ -631,9 +631,7 @@ return {
     local ensure_installed = { 'stylua' }
     if has_dotnet then
       table.insert(ensure_installed, 'roslyn')
-    end
-    if not has_roslyn then
-      table.insert(ensure_installed, omnisharp_package)
+      table.insert(ensure_installed, 'netcoredbg')
     end
 
     require('mason-tool-installer').setup {
