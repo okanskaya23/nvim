@@ -315,37 +315,19 @@ return {
       group = lsp_attach_augroup,
       callback = function(event)
         local client = vim.lsp.get_client_by_id(event.data.client_id)
-        local is_omnisharp = client and client.name == 'omnisharp'
         local is_roslyn = client and client.name == 'roslyn'
-
-        if is_omnisharp then
-          client.server_capabilities.semanticTokensProvider = nil
-        end
 
         local map = function(keys, func, desc)
           vim.keymap.set('n', keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
         end
 
-        if is_omnisharp then
-          map('gd', omnisharp_fast_definition, '[G]oto [D]efinition')
-          map('<leader>cD', omnisharp_goto_definition, '[C]# Metadata [D]efinition')
-          map('gr', omnisharp_references, '[G]oto [R]eferences')
-          map('grr', omnisharp_references, '[G]oto [R]eferences')
-          map('gI', function()
-            require('omnisharp_extended').lsp_implementation()
-          end, '[G]oto [I]mplementation')
-          map('<leader>D', function()
-            require('omnisharp_extended').lsp_type_definition()
-          end, 'Type [D]efinition')
-        elseif is_roslyn then
+        if is_roslyn then
           map('gd', vim.lsp.buf.definition, '[G]oto [D]efinition')
-          map('gr', vim.lsp.buf.references, '[G]oto [R]eferences')
           map('grr', vim.lsp.buf.references, '[G]oto [R]eferences')
           map('gI', vim.lsp.buf.implementation, '[G]oto [I]mplementation')
           map('<leader>D', vim.lsp.buf.type_definition, 'Type [D]efinition')
         else
           map('gd', telescope_picker 'lsp_definitions', '[G]oto [D]efinition')
-          map('gr', telescope_picker 'lsp_references', '[G]oto [R]eferences')
           map('grr', telescope_picker 'lsp_references', '[G]oto [R]eferences')
           map('gI', telescope_picker 'lsp_implementations', '[G]oto [I]mplementation')
           map('<leader>D', telescope_picker 'lsp_type_definitions', 'Type [D]efinition')

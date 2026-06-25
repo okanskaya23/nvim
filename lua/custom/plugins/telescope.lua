@@ -50,7 +50,7 @@ return { -- Fuzzy Finder (files, lsp, etc)
         desc = ' Find [/] in Open Files',
       },
       {
-        '<leader>sn',
+        '<leader>fn',
         function()
           require('telescope.builtin').find_files { cwd = vim.fn.stdpath 'config' }
         end,
