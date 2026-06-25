@@ -2,12 +2,40 @@ return {
   'neovim/nvim-lspconfig',
   event = { 'BufReadPre', 'BufNewFile' },
   dependencies = {
-    { 'williamboman/mason.nvim', opts = {} },
+    {
+      'williamboman/mason.nvim',
+      opts = {
+        registries = {
+          'github:mason-org/mason-registry',
+          'github:Crashdummyy/mason-registry',
+        },
+      },
+    },
     'williamboman/mason-lspconfig.nvim',
     'WhoIsSethDaniel/mason-tool-installer.nvim',
     {
       'Hoffs/omnisharp-extended-lsp.nvim',
       lazy = true,
+    },
+    {
+      'seblyng/roslyn.nvim',
+      cond = function()
+        local dotnet_paths = {
+          vim.fn.exepath 'dotnet',
+          '/opt/homebrew/bin/dotnet',
+          '/usr/local/bin/dotnet',
+        }
+        local roslyn_path = vim.fn.stdpath 'data' .. '/mason/bin/roslyn-language-server'
+        local has_dotnet = vim.iter(dotnet_paths):any(function(path)
+          return path ~= nil and path ~= '' and vim.fn.executable(path) == 1
+        end)
+        return has_dotnet and (vim.fn.executable(roslyn_path) == 1 or vim.fn.executable 'roslyn-language-server' == 1)
+      end,
+      opts = {
+        filewatching = 'roslyn',
+        broad_search = true,
+        silent = true,
+      },
     },
     { 'j-hui/fidget.nvim', opts = {} },
     { 'folke/neodev.nvim', opts = {} },
@@ -288,6 +316,7 @@ return {
       callback = function(event)
         local client = vim.lsp.get_client_by_id(event.data.client_id)
         local is_omnisharp = client and client.name == 'omnisharp'
+        local is_roslyn = client and client.name == 'roslyn'
 
         if is_omnisharp then
           client.server_capabilities.semanticTokensProvider = nil
@@ -308,9 +337,16 @@ return {
           map('<leader>D', function()
             require('omnisharp_extended').lsp_type_definition()
           end, 'Type [D]efinition')
+        elseif is_roslyn then
+          map('gd', vim.lsp.buf.definition, '[G]oto [D]efinition')
+          map('gr', vim.lsp.buf.references, '[G]oto [R]eferences')
+          map('grr', vim.lsp.buf.references, '[G]oto [R]eferences')
+          map('gI', vim.lsp.buf.implementation, '[G]oto [I]mplementation')
+          map('<leader>D', vim.lsp.buf.type_definition, 'Type [D]efinition')
         else
           map('gd', telescope_picker 'lsp_definitions', '[G]oto [D]efinition')
           map('gr', telescope_picker 'lsp_references', '[G]oto [R]eferences')
+          map('grr', telescope_picker 'lsp_references', '[G]oto [R]eferences')
           map('gI', telescope_picker 'lsp_implementations', '[G]oto [I]mplementation')
           map('<leader>D', telescope_picker 'lsp_type_definitions', 'Type [D]efinition')
         end
@@ -368,7 +404,37 @@ return {
       return path ~= '' and path or name
     end
 
-    local has_dotnet = vim.fn.executable 'dotnet' == 1
+    local function executable_path(name)
+      local mason_path = vim.fn.stdpath 'data' .. '/mason/bin/' .. name
+      if vim.fn.executable(mason_path) == 1 then
+        return mason_path
+      end
+
+      for _, bin_dir in ipairs { '/opt/homebrew/bin', '/usr/local/bin' } do
+        local absolute_path = bin_dir .. '/' .. name
+        if vim.fn.executable(absolute_path) == 1 then
+          return absolute_path
+        end
+      end
+
+      local path = vim.fn.exepath(name)
+      return path ~= '' and path or nil
+    end
+
+    local dotnet_cmd = executable_path 'dotnet'
+    local has_dotnet = dotnet_cmd ~= nil
+    local roslyn_cmd = executable_path 'roslyn-language-server'
+    local has_roslyn = has_dotnet and roslyn_cmd ~= nil
+    local dotnet_root = vim.env.DOTNET_ROOT
+    if not dotnet_root or dotnet_root == '' then
+      for _, candidate in ipairs { '/opt/homebrew/opt/dotnet/libexec', '/usr/local/share/dotnet' } do
+        if vim.fn.isdirectory(candidate) == 1 then
+          dotnet_root = candidate
+          break
+        end
+      end
+    end
+
     local omnisharp_cmd = has_dotnet and 'OmniSharp' or 'omnisharp-mono'
     local omnisharp_package = has_dotnet and 'omnisharp' or 'omnisharp-mono'
     local omnisharp_args = {
@@ -461,7 +527,55 @@ return {
     end
 
     local servers = {
-      omnisharp = {
+      lua_ls = {
+        settings = {
+          Lua = {
+            completion = {
+              callSnippet = 'Replace',
+            },
+          },
+        },
+      },
+    }
+
+    if has_roslyn then
+      servers.roslyn = {
+        capabilities = {
+          workspace = {
+            didChangeWatchedFiles = {
+              dynamicRegistration = false,
+            },
+          },
+        },
+        cmd_env = {
+          Configuration = vim.env.Configuration or 'Debug',
+          DOTNET_ROOT = dotnet_root,
+          DOTNET_ROOT_ARM64 = dotnet_root,
+          TMPDIR = vim.env.TMPDIR and vim.fn.resolve(vim.env.TMPDIR) or nil,
+        },
+        settings = {
+          ['csharp|background_analysis'] = {
+            dotnet_analyzer_diagnostics_scope = 'openFiles',
+            dotnet_compiler_diagnostics_scope = 'openFiles',
+          },
+          ['csharp|code_lens'] = {
+            dotnet_enable_references_code_lens = false,
+            dotnet_enable_tests_code_lens = false,
+          },
+          ['csharp|completion'] = {
+            dotnet_provide_regex_completions = false,
+            dotnet_show_completion_items_from_unimported_namespaces = false,
+          },
+          ['csharp|formatting'] = {
+            dotnet_organize_imports_on_format = true,
+          },
+          ['csharp|symbol_search'] = {
+            dotnet_search_reference_assemblies = false,
+          },
+        },
+      }
+    else
+      servers.omnisharp = {
         cmd = start_omnisharp,
         capabilities = {
           workspace = {
@@ -506,28 +620,24 @@ return {
             IncludePrereleases = true,
           },
         },
-      },
-      lua_ls = {
-        settings = {
-          Lua = {
-            completion = {
-              callSnippet = 'Replace',
-            },
-          },
-        },
-      },
-    }
+      }
+    end
 
     for server_name, server in pairs(servers) do
       server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
       vim.lsp.config(server_name, server)
     end
 
+    local ensure_installed = { 'stylua' }
+    if has_dotnet then
+      table.insert(ensure_installed, 'roslyn')
+    end
+    if not has_roslyn then
+      table.insert(ensure_installed, omnisharp_package)
+    end
+
     require('mason-tool-installer').setup {
-      ensure_installed = {
-        omnisharp_package,
-        'stylua',
-      },
+      ensure_installed = ensure_installed,
     }
 
     require('mason-lspconfig').setup {
