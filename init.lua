@@ -10,11 +10,11 @@ vim.opt.rtp:prepend(lazypath)
 require('lazy').setup({
   'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
   -- "gc" to comment visual regions/lines
-  { 'numToStr/Comment.nvim', opts = {} },
+  { 'numToStr/Comment.nvim', event = 'VeryLazy', opts = {} },
 
   { -- Useful plugin to show you pending keybinds.
     'folke/which-key.nvim',
-    event = 'VimEnter', -- Sets the loading event to 'VimEnter'
+    event = 'VeryLazy',
     config = function() -- This is the function that runs, AFTER loading
       local wk = require 'which-key'
       wk.setup()
@@ -39,7 +39,7 @@ require('lazy').setup({
 
   { -- Autoformat
     'stevearc/conform.nvim',
-    lazy = false,
+    event = { 'BufWritePre' },
     keys = {
       {
         '<leader>cf',
@@ -206,6 +206,7 @@ require('lazy').setup({
   },
   {
     'nvim-lualine/lualine.nvim',
+    event = 'VeryLazy',
     config = function()
       local diagnostic_error_counts = {}
       local total_diagnostic_errors = 0
@@ -221,12 +222,6 @@ require('lazy').setup({
         end
 
         total_diagnostic_errors = total_diagnostic_errors + current - previous
-      end
-
-      for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-        if vim.api.nvim_buf_is_loaded(bufnr) then
-          update_buffer_diagnostics(bufnr)
-        end
       end
 
       vim.api.nvim_create_autocmd('DiagnosticChanged', {

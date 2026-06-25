@@ -36,7 +36,7 @@ return {
       },
       color_overrides = {},
       custom_highlights = {},
-      default_integrations = true,
+      default_integrations = false,
       integrations = {
         cmp = true,
         gitsigns = true,

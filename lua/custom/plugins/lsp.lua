@@ -38,7 +38,7 @@ return {
       },
     },
     { 'j-hui/fidget.nvim', opts = {} },
-    { 'folke/neodev.nvim', opts = {} },
+    { 'folke/lazydev.nvim', ft = 'lua', opts = {} },
   },
   config = function()
     local diagnostic_signs = {
@@ -546,7 +546,7 @@ return {
           },
           ['csharp|completion'] = {
             dotnet_provide_regex_completions = false,
-            dotnet_show_completion_items_from_unimported_namespaces = false,
+            dotnet_show_completion_items_from_unimported_namespaces = true,
           },
           ['csharp|formatting'] = {
             dotnet_organize_imports_on_format = true,

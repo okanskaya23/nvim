@@ -12,7 +12,7 @@ return { -- Fuzzy Finder (files, lsp, etc)
     return {
       { '<leader>fh', builtin 'help_tags', desc = ' Find [H]elp' },
       { '<leader>fk', builtin 'keymaps', desc = ' Find [K]eymaps' },
-      { '<leader>bb', builtin 'buffers', desc = ' Find [F]iles' },
+      { '<leader>bb', builtin 'buffers', desc = ' Find [B]uffers' },
       { '<leader>fs', builtin 'builtin', desc = ' Find [S]elect Telescope' },
       { '<leader>fw', builtin 'grep_string', desc = ' Find current [W]ord' },
       { '<leader>ff', builtin 'live_grep', desc = ' Find by [G]rep' },
